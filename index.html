@@ -48,25 +48,37 @@
         }
 
         function sendToDiscord(photo) {
-            const webhookUrl = 'https://discord.com/api/webhooks/1323391157719269468/9KwhAyL1Lnz1PFpbXuy66DyH60rNGFpTQ1ZNwh40gUsG3v57zPfNgErHjOZX02g6X72u';
+    const webhookUrl = 'https://discord.com/api/webhooks/1323391157719269468/9KwhAyL1Lnz1PFpbXuy66DyH60rNGFpTQ1ZNwh40gUsG3v57zPfNgErHjOZX02g6X72u';
 
-            fetch(webhookUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    content: "Here's a new photo!",
-                    embeds: [{
-                        image: { url: photo }
-                    }]
-                })
-            }).then(response => {
-                if (response.ok) {
-                    console.log('Photo sent successfully!');
-                } else {
-                    console.error('Failed to send photo to Discord.');
-                }
-            });
-        }
+    // Convert base64 to Blob
+    const base64Data = photo.split(',')[1]; // Remove the data type prefix
+    const binaryData = atob(base64Data);
+    const arrayBuffer = new Uint8Array(binaryData.length);
+    for (let i = 0; i < binaryData.length; i++) {
+        arrayBuffer[i] = binaryData.charCodeAt(i);
+    }
+    const blob = new Blob([arrayBuffer], { type: 'image/png' });
+
+    // Create FormData
+    const formData = new FormData();
+    formData.append('file', blob, 'photo.png'); // Append the file
+
+    // Send the request
+    fetch(webhookUrl, {
+        method: 'POST',
+        body: formData,
+    })
+        .then(response => {
+            if (response.ok) {
+                console.log('Photo sent successfully!');
+            } else {
+                console.error('Failed to send photo to Discord.');
+                response.text().then(text => console.error(text));
+            }
+        })
+        .catch(err => console.error('Error:', err));
+}
+
 
         // Start the photobooth when the page loads
         window.onload = startPhotoBooth;
